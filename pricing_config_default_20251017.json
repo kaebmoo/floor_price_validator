@@ -1,0 +1,58 @@
+{
+  "config_name": "default",
+  "speed_prices": {
+    "residential": {
+      "100": 500,
+      "200": 800,
+      "500": 1500,
+      "1000": 2500
+    },
+    "business": {
+      "100": 800,
+      "200": 1200,
+      "500": 2200,
+      "1000": 3500
+    }
+  },
+  "distance_pricing": {
+    "residential": {
+      "price_per_km": 50.0,
+      "max_standard_distance": 5.0
+    },
+    "business": {
+      "price_per_km": 100.0,
+      "max_standard_distance": 10.0
+    },
+    "extra_distance_multiplier": 1.5
+  },
+  "fixed_ip": {
+    "residential": 300.0,
+    "business": 500.0
+  },
+  "equipment_prices": {
+    "standard_router": 0,
+    "wifi6_router": 500,
+    "mesh_system": 1500,
+    "ont": 300,
+    "managed_switch": 800,
+    "enterprise_router": 2000
+  },
+  "contract_discounts": {
+    "residential": {
+      "12": 0.05,
+      "24": 0.1,
+      "36": 0.15
+    },
+    "business": {
+      "12": 0.03,
+      "24": 0.07,
+      "36": 0.12
+    }
+  },
+  "business_premium_percent": 0.1,
+  "installation_fee": {
+    "residential": 500.0,
+    "business": 1500.0
+  },
+  "notes": "Default configuration imported from config.py"
+}

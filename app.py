@@ -5,6 +5,8 @@ import auth
 import database as db
 import floor_price as fp
 from config import Config
+import config_manager as cm
+import json
 
 # Page config
 st.set_page_config(
@@ -45,7 +47,7 @@ def main_app():
     # Header with logout
     col1, col2 = st.columns([4, 1])
     with col1:
-        st.title("Floor Price Validator")
+        st.title("💰 Floor Price Validator")
     with col2:
         st.write(f"👤 {st.session_state.user_email}")
         if st.button("🚪 ออกจากระบบ"):
@@ -53,10 +55,11 @@ def main_app():
     
     # Tabs
     if st.session_state.is_admin:
-        tab1, tab2, tab3, tab4 = st.tabs([
+        tab1, tab2, tab3, tab4, tab5 = st.tabs([  # ⬅️ เพิ่ม tab5
             "✅ ตรวจสอบราคา", 
             "📊 ประวัติของฉัน", 
-            "👥 จัดการผู้ใช้",  # ⬅️ เพิ่ม tab นี้
+            "👥 จัดการผู้ใช้",
+            "⚙️ จัดการราคา",  # ⬅️ เพิ่ม tab นี้
             "🔧 Admin Dashboard"
         ])
     else:
@@ -75,9 +78,14 @@ def main_app():
         with tab3:
             user_management_interface()
     
-    # Tab 4: Admin Dashboard (only for admins)
+    # Tab 4: Price Config Management (only for admins)  # ⬅️ เพิ่ม
     if st.session_state.is_admin:
         with tab4:
+            price_config_interface()
+    
+    # Tab 5: Admin Dashboard (only for admins)
+    if st.session_state.is_admin:
+        with tab5:
             admin_dashboard()
 
 def price_check_interface():
@@ -97,13 +105,75 @@ def price_check_interface():
             help="Residential = บ้าน, Business = ธุรกิจ"
         )
         
-        # Speed selection
-        speed_options = sorted(Config.SPEED_PRICES[customer_type].keys())
-        speed = st.selectbox(
-            "ความเร็วอินเทอร์เน็ต (Mbps)",
-            options=speed_options,
-            index=1 if len(speed_options) > 1 else 0
+        # Speed selection mode - เพิ่มส่วนนี้
+        speed_mode = st.radio(
+            "วิธีเลือกความเร็ว",
+            options=['standard', 'custom'],
+            format_func=lambda x: "📦 แพ็คเกจมาตรฐาน" if x == 'standard' else "✏️ กรอกเองแบบ Custom",
+            horizontal=True,
+            help="แพ็คเกจมาตรฐาน = เลือกจากรายการ, Custom = กรอกความเร็วเอง"
         )
+        
+        # Get speed options from config
+        db_config = cm.get_active_config()
+        if db_config:
+            if customer_type == 'residential':
+                speed_dict = {int(k): v for k, v in db_config.speed_prices_residential.items()}
+            else:
+                speed_dict = {int(k): v for k, v in db_config.speed_prices_business.items()}
+            speed_options = sorted(speed_dict.keys())
+        else:
+            speed_options = sorted(Config.SPEED_PRICES[customer_type].keys())
+        
+        # Speed input based on mode
+        if speed_mode == 'standard':
+            # แพ็คเกจมาตรฐาน - ใช้ selectbox
+            speed = st.selectbox(
+                "ความเร็วอินเทอร์เน็ต (Mbps)",
+                options=speed_options,
+                index=1 if len(speed_options) > 1 else 0
+            )
+            st.info(f"💡 ราคาตามแพ็คเกจมาตรฐาน")
+            
+        else:
+            # Custom speed - ใช้ number input
+            col_speed1, col_speed2 = st.columns([2, 1])
+            
+            with col_speed1:
+                speed = st.number_input(
+                    "ความเร็วอินเทอร์เน็ต (Mbps)",
+                    min_value=10,
+                    max_value=10000,
+                    value=speed_options[1] if len(speed_options) > 1 else speed_options[0],
+                    step=10,
+                    help="กรอกความเร็วที่ต้องการ"
+                )
+            
+            with col_speed2:
+                st.write("**แพ็คเกจมาตรฐาน:**")
+                for s in speed_options:
+                    st.caption(f"• {s} Mbps")
+            
+            # แสดง warning และ interpolation details
+            if speed not in speed_options:
+                st.warning(f"⚠️ **{speed} Mbps** ไม่ใช่แพ็คเกจมาตรฐาน")
+                
+                # คำนวณช่วงที่จะใช้ interpolate
+                lower_speeds = [s for s in speed_options if s < speed]
+                upper_speeds = [s for s in speed_options if s > speed]
+                
+                if lower_speeds and upper_speeds:
+                    lower = max(lower_speeds)
+                    upper = min(upper_speeds)
+                    st.caption(f"📊 ระบบจะคำนวณราคาจากช่วง **{lower} Mbps** → **{upper} Mbps**")
+                elif lower_speeds:
+                    lower = max(lower_speeds)
+                    st.caption(f"📊 ความเร็วเกินแพ็คเกจสูงสุด - ใช้ราคา **{lower} Mbps** เป็นฐาน")
+                else:
+                    upper = min(upper_speeds)
+                    st.caption(f"📊 ความเร็วต่ำกว่าแพ็คเกจต่ำสุด - ใช้ราคา **{upper} Mbps** เป็นฐาน")
+            else:
+                st.success(f"✅ **{speed} Mbps** เป็นแพ็คเกจมาตรฐาน")
         
         # Distance
         max_distance = Config.MAX_STANDARD_DISTANCE[customer_type]
@@ -173,70 +243,105 @@ def price_check_interface():
         
         # Check button
         if st.button("🔍 ตรวจสอบราคา", type="primary", width='stretch'):
-            # Calculate floor price
-            result = fp.calculate_floor_price(
-                customer_type=customer_type,
-                speed=speed,
-                distance=distance,
-                equipment_list=equipment_list,
-                contract_months=contract_months,
-                has_fixed_ip=has_fixed_ip
-            )
-            
-            floor_price = result['floor_price']
-            breakdown = result['breakdown']
-            
-            is_valid = proposed_price >= floor_price
-            margin = fp.calculate_margin(proposed_price, floor_price)
-            
-            # Log the check
-            db.log_price_check(
-                user_email=st.session_state.user_email,
-                customer_type=customer_type,
-                speed=speed,
-                distance=distance,
-                equipment=','.join(equipment_list),
-                contract_months=contract_months,
-                proposed_price=proposed_price,
-                floor_price=floor_price,
-                is_valid=is_valid,
-                margin_percent=margin,
-                has_fixed_ip=has_fixed_ip,
-                notes=notes
-            )
-            
-            # Display result
-            st.write("---")
-            
-            if is_valid:
-                st.markdown(f"""
-                <div class="success-box">
-                    <h2>✅ ราคาผ่าน!</h2>
-                    <p style="font-size: 20px;">ราคาที่เสนอสูงกว่า floor price</p>
-                    <p style="font-size: 18px; color: #28a745;"><strong>Margin: {margin:.2f}%</strong></p>
-                </div>
-                """, unsafe_allow_html=True)
-            else:
-                difference = floor_price - proposed_price
-                st.markdown(f"""
-                <div class="error-box">
-                    <h2>❌ ราคาไม่ผ่าน!</h2>
-                    <p style="font-size: 20px;">ราคาต่ำกว่า floor price</p>
-                    <p style="font-size: 18px; color: #dc3545;"><strong>ต่ำกว่า {difference:.2f} บาท</strong></p>
-                </div>
-                """, unsafe_allow_html=True)
-            
-            # Show breakdown for admins
-            if st.session_state.is_admin:
+            try:
+                # Calculate floor price
+                result = fp.calculate_floor_price(
+                    customer_type=customer_type,
+                    speed=speed,
+                    distance=distance,
+                    equipment_list=equipment_list,
+                    contract_months=contract_months,
+                    has_fixed_ip=has_fixed_ip
+                )
+                
+                floor_price = result['floor_price']
+                breakdown = result['breakdown']
+                
+                is_valid = proposed_price >= floor_price
+                margin = fp.calculate_margin(proposed_price, floor_price)
+                
+                # Log the check
+                db.log_price_check(
+                    user_email=st.session_state.user_email,
+                    customer_type=customer_type,
+                    speed=speed,
+                    distance=distance,
+                    equipment=','.join(equipment_list),
+                    contract_months=contract_months,
+                    proposed_price=proposed_price,
+                    floor_price=floor_price,
+                    is_valid=is_valid,
+                    margin_percent=margin,
+                    has_fixed_ip=has_fixed_ip,
+                    notes=notes
+                )
+                
+                # Display result
                 st.write("---")
-                st.info(f"🔐 **Admin Only - Floor Price: {floor_price:.2f} ฿/เดือน**")
                 
-                with st.expander("📊 รายละเอียดการคำนวณ"):
-                    st.json(breakdown)
+                if is_valid:
+                    st.markdown(f"""
+                    <div class="success-box">
+                        <h2>✅ ราคาผ่าน!</h2>
+                        <p style="font-size: 20px;">ราคาที่เสนอสูงกว่า floor price</p>
+                        <p style="font-size: 18px; color: #28a745;"><strong>Margin: {margin:.2f}%</strong></p>
+                    </div>
+                    """, unsafe_allow_html=True)
+                else:
+                    difference = floor_price - proposed_price
+                    st.markdown(f"""
+                    <div class="error-box">
+                        <h2>❌ ราคาไม่ผ่าน!</h2>
+                        <p style="font-size: 20px;">ราคาต่ำกว่า floor price</p>
+                        <p style="font-size: 18px; color: #dc3545;"><strong>ต่ำกว่า {difference:.2f} บาท</strong></p>
+                    </div>
+                    """, unsafe_allow_html=True)
                 
-                # Installation fee
-                installation_fee = fp.get_installation_fee(customer_type)
-                st.caption(f"💡 ค่าติดตั้งครั้งแรก: {installation_fee:,.0f} บาท (ไม่นับใน monthly)")
+                # Show breakdown for admins
+                if st.session_state.is_admin:
+                    st.write("---")
+                    st.info(f"🔐 **Admin Only - Floor Price: {floor_price:.2f} ฿/เดือน**")
+                    
+                    # แสดงว่าใช้ interpolation หรือไม่
+                    if breakdown.get('interpolated', False):
+                        st.warning(f"⚠️ **ใช้ Interpolation:** ความเร็ว {speed} Mbps ไม่ใช่แพ็คเกจมาตรฐาน")
+                    
+                    with st.expander("📊 รายละเอียดการคำนวณ"):
+                        col_a, col_b = st.columns(2)
+                        
+                        with col_a:
+                            st.write("**ค่าพื้นฐาน:**")
+                            st.write(f"- ราคาตามความเร็ว: {breakdown['base_price']:,.2f} ฿")
+                            if breakdown.get('interpolated', False):
+                                if 'speed_lower' in breakdown and 'speed_upper' in breakdown:
+                                    st.caption(f"  └ คำนวณจาก {breakdown['speed_lower']} → {breakdown['speed_upper']} Mbps")
+                            st.write(f"- ค่าระยะทาง ({breakdown['distance_km']} km): {breakdown['distance_cost']:,.2f} ฿")
+                            if breakdown.get('fixed_ip_cost', 0) > 0:
+                                st.write(f"- Fixed IP: {breakdown['fixed_ip_cost']:,.2f} ฿")
+                            st.write(f"- อุปกรณ์: {breakdown['equipment_cost']:,.2f} ฿")
+                        
+                        with col_b:
+                            st.write("**ส่วนลดและเพิ่มเติม:**")
+                            if breakdown.get('business_premium', 0) > 0:
+                                st.write(f"- Business Premium (+10%): +{breakdown['business_premium']:,.2f} ฿")
+                            st.write(f"- ส่วนลด {breakdown['contract_months']} เดือน ({breakdown['discount_rate']*100:.0f}%): -{breakdown['discount_amount']:,.2f} ฿")
+                            st.write(f"**รวมสุทธิ: {floor_price:,.2f} ฿/เดือน**")
+                        
+                        # Full JSON
+                        with st.expander("🔍 Complete Breakdown (JSON)"):
+                            st.json(breakdown)
+                    
+                    # Installation fee
+                    installation_fee = fp.get_installation_fee(customer_type)
+                    st.caption(f"💡 ค่าติดตั้งครั้งแรก: {installation_fee:,.0f} บาท (ไม่นับใน monthly)")
+            
+            except ValueError as e:
+                st.error(f"❌ เกิดข้อผิดพลาด: {str(e)}")
+            except Exception as e:
+                st.error(f"❌ เกิดข้อผิดพลาดในการคำนวณ: {str(e)}")
+                import traceback
+                with st.expander("🐛 Error Details (Admin)"):
+                    st.code(traceback.format_exc())
 
 def user_management_interface():
     """หน้าจัดการ users (Admin only)"""
@@ -421,8 +526,17 @@ def admin_dashboard():
     
     # Floor Price Calculator
     with st.expander("🔐 คำนวณ Floor Price (Admin Only)"):
-        col1, col2, col3, col4, col5 = st.columns(5)
+        # เพิ่ม speed mode selection
+        calc_speed_mode = st.radio(
+            "วิธีเลือกความเร็ว",
+            options=['standard', 'custom'],
+            format_func=lambda x: "📦 แพ็คเกจมาตรฐาน" if x == 'standard' else "✏️ Custom",
+            horizontal=True,
+            key='admin_speed_mode'
+        )
         
+        col1, col2, col3, col4, col5 = st.columns(5)
+    
         with col1:
             calc_customer_type = st.selectbox(
                 "ประเภท", 
@@ -432,12 +546,34 @@ def admin_dashboard():
             )
         
         with col2:
-            speed_options = sorted(Config.SPEED_PRICES[calc_customer_type].keys())
-            calc_speed = st.selectbox(
-                "ความเร็ว", 
-                speed_options,
-                key='admin_speed'
-            )
+            # Get speed options from config
+            db_config = cm.get_active_config()
+            if db_config:
+                if calc_customer_type == 'residential':
+                    speed_dict = {int(k): v for k, v in db_config.speed_prices_residential.items()}
+                else:
+                    speed_dict = {int(k): v for k, v in db_config.speed_prices_business.items()}
+                speed_options = sorted(speed_dict.keys())
+            else:
+                speed_options = sorted(Config.SPEED_PRICES[calc_customer_type].keys())
+            
+            if calc_speed_mode == 'standard':
+                calc_speed = st.selectbox(
+                    "ความเร็ว", 
+                    speed_options,
+                    key='admin_speed'
+                )
+            else:
+                calc_speed = st.number_input(
+                    "ความเร็ว (Mbps)",
+                    min_value=10,
+                    max_value=10000,
+                    value=speed_options[1] if len(speed_options) > 1 else speed_options[0],
+                    step=10,
+                    key='admin_speed_custom'
+                )
+                if calc_speed not in speed_options:
+                    st.caption(f"⚠️ Custom: {calc_speed} Mbps")
         
         with col3:
             calc_distance = st.number_input(
@@ -460,42 +596,59 @@ def admin_dashboard():
             )
         
         if st.button("🔍 คำนวณ", width='stretch'):
-            result = fp.calculate_floor_price(
-                customer_type=calc_customer_type,
-                speed=calc_speed,
-                distance=calc_distance,
-                equipment_list=['standard_router'],
-                contract_months=calc_contract,
-                has_fixed_ip=calc_has_fixed_ip
-            )
-            
-            floor = result['floor_price']
-            breakdown = result['breakdown']
-            
-            st.success(f"💰 Floor Price: **{floor:,.2f} ฿/เดือน**")
-            
-            # Show breakdown
-            with st.expander("📊 รายละเอียดการคำนวณ"):
-                col_a, col_b = st.columns(2)
+            try:
+                result = fp.calculate_floor_price(
+                    customer_type=calc_customer_type,
+                    speed=calc_speed,
+                    distance=calc_distance,
+                    equipment_list=['standard_router'],
+                    contract_months=calc_contract,
+                    has_fixed_ip=calc_has_fixed_ip
+                )
                 
-                with col_a:
-                    st.write("**ค่าพื้นฐาน:**")
-                    st.write(f"- ราคาตามความเร็ว: {breakdown['base_price']:,.2f} ฿")
-                    st.write(f"- ค่าระยะทาง ({breakdown['distance_km']} km): {breakdown['distance_cost']:,.2f} ฿")
-                    if breakdown.get('fixed_ip_cost', 0) > 0:
-                        st.write(f"- Fixed IP: {breakdown['fixed_ip_cost']:,.2f} ฿")
-                    st.write(f"- อุปกรณ์: {breakdown['equipment_cost']:,.2f} ฿")
+                floor = result['floor_price']
+                breakdown = result['breakdown']
                 
-                with col_b:
-                    st.write("**ส่วนลดและเพิ่มเติม:**")
-                    if breakdown.get('business_premium', 0) > 0:
-                        st.write(f"- Business Premium (+10%): +{breakdown['business_premium']:,.2f} ฿")
-                    st.write(f"- ส่วนลด {breakdown['contract_months']} เดือน ({breakdown['discount_rate']*100:.0f}%): -{breakdown['discount_amount']:,.2f} ฿")
-                    st.write(f"**รวมสุทธิ: {floor:,.2f} ฿/เดือน**")
+                st.success(f"💰 Floor Price: **{floor:,.2f} ฿/เดือน**")
                 
-                # Installation fee
-                installation_fee = fp.get_installation_fee(calc_customer_type)
-                st.info(f"💡 ค่าติดตั้งครั้งแรก: {installation_fee:,.0f} บาท (ไม่นับใน monthly)")
+                # แสดง interpolation warning
+                if breakdown.get('interpolated', False):
+                    st.warning(f"⚠️ ใช้ Interpolation สำหรับ {calc_speed} Mbps")
+                
+                # Show breakdown
+                with st.expander("📊 รายละเอียดการคำนวณ"):
+                    col_a, col_b = st.columns(2)
+                    
+                    with col_a:
+                        st.write("**ค่าพื้นฐาน:**")
+                        st.write(f"- ราคาตามความเร็ว: {breakdown['base_price']:,.2f} ฿")
+                        if breakdown.get('interpolated', False):
+                            if 'speed_lower' in breakdown and 'speed_upper' in breakdown:
+                                st.caption(f"  └ คำนวณจาก {breakdown['speed_lower']} → {breakdown['speed_upper']} Mbps")
+                        st.write(f"- ค่าระยะทาง ({breakdown['distance_km']} km): {breakdown['distance_cost']:,.2f} ฿")
+                        if breakdown.get('fixed_ip_cost', 0) > 0:
+                            st.write(f"- Fixed IP: {breakdown['fixed_ip_cost']:,.2f} ฿")
+                        st.write(f"- อุปกรณ์: {breakdown['equipment_cost']:,.2f} ฿")
+                    
+                    with col_b:
+                        st.write("**ส่วนลดและเพิ่มเติม:**")
+                        if breakdown.get('business_premium', 0) > 0:
+                            st.write(f"- Business Premium (+10%): +{breakdown['business_premium']:,.2f} ฿")
+                        st.write(f"- ส่วนลด {breakdown['contract_months']} เดือน ({breakdown['discount_rate']*100:.0f}%): -{breakdown['discount_amount']:,.2f} ฿")
+                        st.write(f"**รวมสุทธิ: {floor:,.2f} ฿/เดือน**")
+                    
+                    # Installation fee
+                    installation_fee = fp.get_installation_fee(calc_customer_type)
+                    st.info(f"💡 ค่าติดตั้งครั้งแรก: {installation_fee:,.0f} บาท (ไม่นับใน monthly)")
+                    
+                    # Full JSON
+                    with st.expander("🔍 Complete Breakdown (JSON)"):
+                        st.json(breakdown)
+            
+            except Exception as e:
+                st.error(f"❌ เกิดข้อผิดพลาด: {str(e)}")
+                import traceback
+                st.code(traceback.format_exc())
     
     st.write("---")
     
@@ -528,6 +681,237 @@ def admin_dashboard():
         file_name=f'floor_price_logs_{datetime.now().strftime("%Y%m%d")}.csv',
         mime='text/csv'
     )
+
+def price_config_interface():
+    """หน้าจัดการ Pricing Configuration (Admin only)"""
+    st.header("⚙️ จัดการ Pricing Configuration")
+    
+    # Get all configs
+    configs = cm.get_all_configs()
+    
+    # Summary
+    col1, col2 = st.columns(2)
+    with col1:
+        st.metric("📋 Config ทั้งหมด", len(configs))
+    with col2:
+        active_config = [c for c in configs if c.is_active]
+        if active_config:
+            st.success(f"✅ Config ที่ใช้งาน: **{active_config[0].config_name}**")
+        else:
+            st.warning("⚠️ ยังไม่มี config ที่ active")
+    
+    st.write("---")
+    
+    # Tabs for different actions
+    sub_tab1, sub_tab2, sub_tab3 = st.tabs(["📋 รายการ Config", "➕ สร้าง/คัดลอก", "📥 Import/Export"])
+    
+    with sub_tab1:
+        config_list_ui(configs)
+    
+    with sub_tab2:
+        config_create_ui(configs)
+    
+    with sub_tab3:
+        config_import_export_ui(configs)
+
+def config_list_ui(configs):
+    """แสดงรายการ config"""
+    st.subheader("📋 รายการ Pricing Configuration")
+    
+    if not configs:
+        st.info("ยังไม่มี config ในระบบ กรุณาสร้าง config ใหม่")
+        if st.button("🚀 สร้าง Default Config"):
+            cm.create_default_config(created_by=st.session_state.user_email)
+            st.success("✅ สร้าง default config สำเร็จ!")
+            st.rerun()
+        return
+    
+    for config in configs:
+        with st.expander(
+            f"{'✅ ' if config.is_active else '⚪ '}{config.config_name}" + 
+            (f" (Active)" if config.is_active else ""),
+            expanded=config.is_active
+        ):
+            col1, col2 = st.columns([3, 1])
+            
+            with col1:
+                st.write(f"**สร้างโดย:** {config.created_by}")
+                st.write(f"**สร้างเมื่อ:** {config.created_at.strftime('%Y-%m-%d %H:%M')}")
+                st.write(f"**อัปเดตล่าสุด:** {config.updated_at.strftime('%Y-%m-%d %H:%M')}")
+                if config.notes:
+                    st.caption(f"📝 {config.notes}")
+            
+            with col2:
+                if not config.is_active:
+                    if st.button(f"✅ เปิดใช้งาน", key=f"activate_{config.id}"):
+                        cm.activate_config(config.config_name, st.session_state.user_email)
+                        st.success(f"✅ เปิดใช้งาน {config.config_name}")
+                        st.rerun()
+                
+                if not config.is_active:
+                    if st.button(f"🗑️ ลบ", key=f"delete_{config.id}"):
+                        if cm.delete_config(config.config_name, st.session_state.user_email):
+                            st.success(f"✅ ลบ {config.config_name} สำเร็จ")
+                            st.rerun()
+                        else:
+                            st.error("❌ ไม่สามารถลบได้ (config กำลังใช้งานอยู่)")
+            
+            # Show pricing details
+            st.write("---")
+            
+            tab_res, tab_bus = st.tabs(["🏠 Residential", "🏢 Business"])
+            
+            with tab_res:
+                st.write("**ราคาตามความเร็ว:**")
+                st.json(config.speed_prices_residential)
+                
+                col_a, col_b, col_c = st.columns(3)
+                with col_a:
+                    st.metric("ค่าระยะทาง", f"{config.distance_price_residential} ฿/km")
+                with col_b:
+                    st.metric("ระยะมาตรฐาน", f"{config.max_distance_residential} km")
+                with col_c:
+                    st.metric("Fixed IP", f"{config.fixed_ip_residential} ฿")
+                
+                st.write("**ส่วนลดตามสัญญา:**")
+                discounts_res = {f"{k} เดือน": f"{v*100:.0f}%" 
+                                for k, v in config.contract_discounts_residential.items()}
+                st.json(discounts_res)
+            
+            with tab_bus:
+                st.write("**ราคาตามความเร็ว:**")
+                st.json(config.speed_prices_business)
+                
+                col_a, col_b, col_c = st.columns(3)
+                with col_a:
+                    st.metric("ค่าระยะทาง", f"{config.distance_price_business} ฿/km")
+                with col_b:
+                    st.metric("ระยะมาตรฐาน", f"{config.max_distance_business} km")
+                with col_c:
+                    st.metric("Fixed IP", f"{config.fixed_ip_business} ฿")
+                
+                st.write("**ส่วนลดตามสัญญา:**")
+                discounts_bus = {f"{k} เดือน": f"{v*100:.0f}%" 
+                                for k, v in config.contract_discounts_business.items()}
+                st.json(discounts_bus)
+                
+                st.metric("Business Premium", f"{config.business_premium_percent*100:.0f}%")
+
+def config_create_ui(configs):
+    """UI สำหรับสร้าง/คัดลอก config"""
+    st.subheader("➕ สร้างหรือคัดลอก Config")
+    
+    # Duplicate existing config
+    if configs:
+        st.write("**คัดลอกจาก Config ที่มี:**")
+        col1, col2 = st.columns([2, 1])
+        
+        with col1:
+            source_config = st.selectbox(
+                "เลือก config ต้นฉบับ",
+                options=[c.config_name for c in configs],
+                key="duplicate_source"
+            )
+        
+        with col2:
+            new_name = st.text_input(
+                "ชื่อ config ใหม่",
+                placeholder="promotion_2025",
+                key="duplicate_name"
+            )
+        
+        if st.button("📋 คัดลอก Config", type="primary"):
+            if not new_name:
+                st.error("❌ กรุณากรอกชื่อ config ใหม่")
+            elif new_name in [c.config_name for c in configs]:
+                st.error("❌ ชื่อ config นี้มีอยู่แล้ว")
+            else:
+                new_config = cm.duplicate_config(
+                    source_config, 
+                    new_name, 
+                    st.session_state.user_email
+                )
+                if new_config:
+                    st.success(f"✅ คัดลอก config สำเร็จ: {new_name}")
+                    st.rerun()
+                else:
+                    st.error("❌ ไม่สามารถคัดลอกได้")
+    
+    st.write("---")
+    
+    # Create from default
+    st.write("**สร้างจาก config.py:**")
+    if st.button("🚀 สร้าง Default Config"):
+        cm.create_default_config(created_by=st.session_state.user_email)
+        st.success("✅ สร้าง default config สำเร็จ!")
+        st.rerun()
+
+def config_import_export_ui(configs):
+    """UI สำหรับ Import/Export"""
+    st.subheader("📥 Import/Export Configuration")
+    
+    # Export
+    st.write("**Export Config:**")
+    if configs:
+        col1, col2 = st.columns([2, 1])
+        
+        with col1:
+            export_config = st.selectbox(
+                "เลือก config ที่จะ export",
+                options=[c.config_name for c in configs],
+                key="export_config"
+            )
+        
+        with col2:
+            st.write("")
+            st.write("")
+            if st.button("📥 Export เป็น JSON"):
+                json_data = cm.export_config_to_json(export_config)
+                if json_data:
+                    json_str = json.dumps(json_data, indent=2, ensure_ascii=False)
+                    st.download_button(
+                        label="💾 ดาวน์โหลด JSON",
+                        data=json_str,
+                        file_name=f"pricing_config_{export_config}_{datetime.now().strftime('%Y%m%d')}.json",
+                        mime="application/json"
+                    )
+    
+    st.write("---")
+    
+    # Import
+    st.write("**Import Config:**")
+    uploaded_file = st.file_uploader(
+        "อัปโหลดไฟล์ JSON",
+        type=['json'],
+        key="import_file"
+    )
+    
+    import_name = st.text_input(
+        "ชื่อ config ที่จะสร้าง",
+        placeholder="imported_config",
+        key="import_name"
+    )
+    
+    if st.button("📤 Import จาก JSON", type="primary"):
+        if not uploaded_file:
+            st.error("❌ กรุณาอัปโหลดไฟล์ JSON")
+        elif not import_name:
+            st.error("❌ กรุณากรอกชื่อ config")
+        elif import_name in [c.config_name for c in configs]:
+            st.error("❌ ชื่อ config นี้มีอยู่แล้ว")
+        else:
+            try:
+                json_data = json.load(uploaded_file)
+                new_config = cm.import_config_from_json(
+                    json_data,
+                    import_name,
+                    st.session_state.user_email
+                )
+                if new_config:
+                    st.success(f"✅ Import config สำเร็จ: {import_name}")
+                    st.rerun()
+            except Exception as e:
+                st.error(f"❌ ไม่สามารถ import ได้: {str(e)}")
 
 # Main entry point
 if __name__ == "__main__":
