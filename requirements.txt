@@ -1,0 +1,7 @@
+streamlit
+pandas
+python-dotenv
+sqlalchemy
+bcrypt
+email-validator
+pytz
