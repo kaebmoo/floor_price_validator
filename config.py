@@ -35,16 +35,28 @@ class Config:
     # Speed Prices - แยกตามประเภทลูกค้า
     SPEED_PRICES = {
         'residential': {
-            100: 500,
-            200: 800,
-            500: 1500,
+            100: 199,
+            150: 210,     
+            200: 221,
+            300: 242,
+            400: 264,
+            500: 285,
+            600: 307,
+            700: 328,
+            800: 350,
             1000: 2500
         },
         'business': {
-            100: 800,      # ธุรกิจแพงกว่า 60%
-            200: 1200,
-            500: 2200,
-            1000: 3500
+            100: 227,
+            150: 240,     
+            200: 252,
+            300: 277,
+            400: 302,
+            500: 327,
+            600: 352,
+            700: 378,
+            800: 403,
+            1000: 453
         }
     }
     
@@ -61,43 +73,48 @@ class Config:
     }
     
     # Extra Distance Multiplier (เกินระยะปกติคิดเพิ่ม)
-    EXTRA_DISTANCE_MULTIPLIER = 1.5
+    EXTRA_DISTANCE_MULTIPLIER = 0  # คิดเพิ่ม 10 บาท/เมตร ของราคาปกติ
     
     # Fixed IP Pricing
     FIXED_IP_PRICE = {
-        'residential': 300,  # บ้าน 300 บาท/เดือน
-        'business': 500      # ธุรกิจ 500 บาท/เดือน (มี SLA ดีกว่า)
+        'residential': 200,  # บ้าน 200 บาท/เดือน
+        'business': 200      # ธุรกิจ 200 บาท/เดือน (มี SLA ดีกว่า)
     }
     
     # Equipment Prices
     EQUIPMENT_PRICES = {
-        'standard_router': 0,
-        'wifi6_router': 500,
-        'mesh_system': 1500,
-        'ont': 300,
-        'managed_switch': 800,      # เพิ่มสำหรับธุรกิจ
-        'enterprise_router': 2000   # เพิ่มสำหรับธุรกิจ
+        'ONU Huawei HG8145X6 (AX3000 + 1POTS)': 74,
+        'ONU ZTE 6201B (AX3000 + 1POTS)': 69,
+        'ONU Huawei HG8140H5 (No WiFi + 1POTS)': 40,
+        'ONU ZTE F612 (No WiFi + 1POTS)': 36,
+        'WiFi 6 Router (AX.3000)': 26,      # เพิ่มสำหรับธุรกิจ
+        'WiFi 6 Router (AX.1800)': 35,   # เพิ่มสำหรับธุรกิจ
+        'WiFi 6 Router (AX.1200)': 19,
+        'Mesh WiFi 6 Router (AX.3000) Pack 2': 106,
+        'ATA (2 FXS)': 36,
+        'ATA (4 FXS)': 68,
+        'ATA (8 FXS)': 132
     }
     
     # Contract Discounts - ส่วนลดตามระยะสัญญา
     CONTRACT_DISCOUNTS = {
         'residential': {
-            12: 0.05,   # 12 เดือน ลด 5%
-            24: 0.10,   # 24 เดือน ลด 10%
-            36: 0.15    # 36 เดือน ลด 15%
+            12: 0.0,   # 12 เดือน ลด 5%
+            24: 0.0,   # 24 เดือน ลด 10%
+            36: 0.0    # 36 เดือน ลด 15%
         },
         'business': {
-            12: 0.03,   # ธุรกิจส่วนลดน้อยกว่า
-            24: 0.07,
-            36: 0.12
+            12: 0.0,   # ธุรกิจส่วนลดน้อยกว่า
+            24: 0.0,
+            36: 0.0
         }
     }
     
     # Business Premium (เพิ่มค่า SLA, Support 24/7)
-    BUSINESS_PREMIUM_PERCENT = 0.10  # เพิ่ม 10% สำหรับ business support
+    BUSINESS_PREMIUM_PERCENT = 0.0  # เพิ่ม 10% สำหรับ business support
     
     # Installation Fee - ค่าติดตั้งครั้งแรก (ไม่นับใน monthly floor price)
     INSTALLATION_FEE = {
-        'residential': 500,
-        'business': 1500
+        'residential': 2777, # ระยะทางสาย 300 เมตร + 15 เมตร
+        'business': 3753     # ระยะทางสาย 500 เมตร + 20 เมตร
     }
