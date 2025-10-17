@@ -1,4 +1,5 @@
 *.db
+/backup*
 
 # Byte-compiled / optimized / DLL files
 __pycache__/
@@ -181,3 +182,4 @@ cython_debug/
 #  refer to https://docs.cursor.com/context/ignore-files
 .cursorignore
 .cursorindexingignore
+floor_price_plan.md
