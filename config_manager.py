@@ -20,13 +20,13 @@ class PricingConfig(Base):
     speed_prices_residential = Column(JSON, nullable=False)
     speed_prices_business = Column(JSON, nullable=False)
     
-    # Distance Pricing
-    distance_price_residential = Column(Float, nullable=False)
-    distance_price_business = Column(Float, nullable=False)
-    max_distance_residential = Column(Float, nullable=False)
-    max_distance_business = Column(Float, nullable=False)
-    extra_distance_multiplier = Column(Float, nullable=False)
-    
+    # Installation configuration (stored in legacy distance fields)
+    distance_price_residential = Column(Float, nullable=False)  # base installation cost (residential)
+    distance_price_business = Column(Float, nullable=False)     # base installation cost (business)
+    max_distance_residential = Column(Float, nullable=False)   # base installation length in meters (residential)
+    max_distance_business = Column(Float, nullable=False)      # base installation length in meters (business)
+    extra_distance_multiplier = Column(Float, nullable=False)  # extra cost per additional meter
+
     # Fixed IP
     fixed_ip_residential = Column(Float, nullable=False)
     fixed_ip_business = Column(Float, nullable=False)
@@ -123,11 +123,11 @@ def create_default_config(created_by="system"):
             speed_prices_residential={str(k): v for k, v in Config.SPEED_PRICES['residential'].items()},
             speed_prices_business={str(k): v for k, v in Config.SPEED_PRICES['business'].items()},
             
-            distance_price_residential=Config.DISTANCE_PRICE_PER_KM['residential'],
-            distance_price_business=Config.DISTANCE_PRICE_PER_KM['business'],
-            max_distance_residential=Config.MAX_STANDARD_DISTANCE['residential'],
-            max_distance_business=Config.MAX_STANDARD_DISTANCE['business'],
-            extra_distance_multiplier=Config.EXTRA_DISTANCE_MULTIPLIER,
+            distance_price_residential=Config.INSTALLATION_CONFIG['residential']['base_cost'],
+            distance_price_business=Config.INSTALLATION_CONFIG['business']['base_cost'],
+            max_distance_residential=Config.INSTALLATION_CONFIG['residential']['base_length_m'],
+            max_distance_business=Config.INSTALLATION_CONFIG['business']['base_length_m'],
+            extra_distance_multiplier=Config.INSTALLATION_CONFIG['extra_cost_per_meter'],
             fixed_ip_residential=Config.FIXED_IP_PRICE['residential'],
             fixed_ip_business=Config.FIXED_IP_PRICE['business'],
             equipment_prices=Config.EQUIPMENT_PRICES,
@@ -309,16 +309,16 @@ def export_config_to_json(config_name):
                 'residential': config.speed_prices_residential,
                 'business': config.speed_prices_business
             },
-            'distance_pricing': {
+            'installation_pricing': {
                 'residential': {
-                    'price_per_km': config.distance_price_residential,
-                    'max_standard_distance': config.max_distance_residential
+                    'base_cost': config.distance_price_residential,
+                    'base_length_m': config.max_distance_residential
                 },
                 'business': {
-                    'price_per_km': config.distance_price_business,
-                    'max_standard_distance': config.max_distance_business
+                    'base_cost': config.distance_price_business,
+                    'base_length_m': config.max_distance_business
                 },
-                'extra_distance_multiplier': config.extra_distance_multiplier
+                'extra_cost_per_meter': config.extra_distance_multiplier
             },
             'fixed_ip': {
                 'residential': config.fixed_ip_residential,
@@ -349,11 +349,11 @@ def import_config_from_json(json_data, config_name, created_by):
             is_active=False,
             speed_prices_residential=json_data['speed_prices']['residential'],
             speed_prices_business=json_data['speed_prices']['business'],
-            distance_price_residential=json_data['distance_pricing']['residential']['price_per_km'],
-            distance_price_business=json_data['distance_pricing']['business']['price_per_km'],
-            max_distance_residential=json_data['distance_pricing']['residential']['max_standard_distance'],
-            max_distance_business=json_data['distance_pricing']['business']['max_standard_distance'],
-            extra_distance_multiplier=json_data['distance_pricing']['extra_distance_multiplier'],
+            distance_price_residential=json_data['installation_pricing']['residential']['base_cost'],
+            distance_price_business=json_data['installation_pricing']['business']['base_cost'],
+            max_distance_residential=json_data['installation_pricing']['residential']['base_length_m'],
+            max_distance_business=json_data['installation_pricing']['business']['base_length_m'],
+            extra_distance_multiplier=json_data['installation_pricing']['extra_cost_per_meter'],
             fixed_ip_residential=json_data['fixed_ip']['residential'],
             fixed_ip_business=json_data['fixed_ip']['business'],
             equipment_prices=json_data['equipment_prices'],

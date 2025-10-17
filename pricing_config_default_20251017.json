@@ -2,57 +2,74 @@
   "config_name": "default",
   "speed_prices": {
     "residential": {
-      "100": 500,
-      "200": 800,
-      "500": 1500,
-      "1000": 2500
+      "100": 199,
+      "150": 210,
+      "200": 221,
+      "300": 242,
+      "400": 264,
+      "500": 285,
+      "600": 307,
+      "700": 328,
+      "800": 350,
+      "1000": 393
     },
     "business": {
-      "100": 800,
-      "200": 1200,
-      "500": 2200,
-      "1000": 3500
+      "100": 227,
+      "150": 240,
+      "200": 252,
+      "300": 277,
+      "400": 302,
+      "500": 327,
+      "600": 352,
+      "700": 378,
+      "800": 403,
+      "1000": 453
     }
   },
-  "distance_pricing": {
+  "installation_pricing": {
     "residential": {
-      "price_per_km": 50.0,
-      "max_standard_distance": 5.0
+      "base_cost": 2777.0,
+      "base_length_m": 315.0
     },
     "business": {
-      "price_per_km": 100.0,
-      "max_standard_distance": 10.0
+      "base_cost": 3753.0,
+      "base_length_m": 520.0
     },
-    "extra_distance_multiplier": 1.5
+    "extra_cost_per_meter": 10.0
   },
   "fixed_ip": {
-    "residential": 300.0,
-    "business": 500.0
+    "residential": 200.0,
+    "business": 200.0
   },
   "equipment_prices": {
-    "standard_router": 0,
-    "wifi6_router": 500,
-    "mesh_system": 1500,
-    "ont": 300,
-    "managed_switch": 800,
-    "enterprise_router": 2000
+    "ONU Huawei HG8145X6 (AX3000 + 1POTS)": 74,
+    "ONU ZTE 6201B (AX3000 + 1POTS)": 69,
+    "ONU Huawei HG8140H5 (No WiFi + 1POTS)": 40,
+    "ONU ZTE F612 (No WiFi + 1POTS)": 36,
+    "WiFi 6 Router (AX.3000)": 26,
+    "WiFi 6 Router (AX.1800)": 35,
+    "WiFi 6 Router (AX.1200)": 19,
+    "Mesh WiFi 6 Router (AX.3000) Pack 2": 106,
+    "ATA (2 FXS)": 36,
+    "ATA (4 FXS)": 68,
+    "ATA (8 FXS)": 132
   },
   "contract_discounts": {
     "residential": {
-      "12": 0.05,
-      "24": 0.1,
-      "36": 0.15
+      "12": 0.0,
+      "24": 0.0,
+      "36": 0.0
     },
     "business": {
-      "12": 0.03,
-      "24": 0.07,
-      "36": 0.12
+      "12": 0.0,
+      "24": 0.0,
+      "36": 0.0
     }
   },
-  "business_premium_percent": 0.1,
+  "business_premium_percent": 0.0,
   "installation_fee": {
-    "residential": 500.0,
-    "business": 1500.0
+    "residential": 2777.0,
+    "business": 3753.0
   },
   "notes": "Default configuration imported from config.py"
 }

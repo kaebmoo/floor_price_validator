@@ -36,7 +36,7 @@ class Config:
     SPEED_PRICES = {
         'residential': {
             100: 199,
-            150: 210,     
+            150: 210,
             200: 221,
             300: 242,
             400: 264,
@@ -44,11 +44,11 @@ class Config:
             600: 307,
             700: 328,
             800: 350,
-            1000: 2500
+            1000: 393
         },
         'business': {
             100: 227,
-            150: 240,     
+            150: 240,
             200: 252,
             300: 277,
             400: 302,
@@ -59,23 +59,8 @@ class Config:
             1000: 453
         }
     }
-    
-    # Distance Price Per KM - แยกตามประเภทลูกค้า
-    DISTANCE_PRICE_PER_KM = {
-        'residential': 50,   # บ้าน 50 บาท/กม.
-        'business': 100      # ธุรกิจ 100 บาท/กม. (ติดตั้งซับซ้อนกว่า)
-    }
-    
-    # Maximum Distance (กม.) - เกินนี้คิดพิเศษ
-    MAX_STANDARD_DISTANCE = {
-        'residential': 5,    # บ้านไม่เกิน 5 กม.
-        'business': 10       # ธุรกิจไม่เกิน 10 กม.
-    }
-    
-    # Extra Distance Multiplier (เกินระยะปกติคิดเพิ่ม)
-    EXTRA_DISTANCE_MULTIPLIER = 0  # คิดเพิ่ม 10 บาท/เมตร ของราคาปกติ
-    
-    # Fixed IP Pricing
+
+    # Fixed IP Pricing (บาท/เดือน)
     FIXED_IP_PRICE = {
         'residential': 200,  # บ้าน 200 บาท/เดือน
         'business': 200      # ธุรกิจ 200 บาท/เดือน (มี SLA ดีกว่า)
@@ -87,8 +72,8 @@ class Config:
         'ONU ZTE 6201B (AX3000 + 1POTS)': 69,
         'ONU Huawei HG8140H5 (No WiFi + 1POTS)': 40,
         'ONU ZTE F612 (No WiFi + 1POTS)': 36,
-        'WiFi 6 Router (AX.3000)': 26,      # เพิ่มสำหรับธุรกิจ
-        'WiFi 6 Router (AX.1800)': 35,   # เพิ่มสำหรับธุรกิจ
+        'WiFi 6 Router (AX.3000)': 26,
+        'WiFi 6 Router (AX.1800)': 35,
         'WiFi 6 Router (AX.1200)': 19,
         'Mesh WiFi 6 Router (AX.3000) Pack 2': 106,
         'ATA (2 FXS)': 36,
@@ -111,10 +96,23 @@ class Config:
     }
     
     # Business Premium (เพิ่มค่า SLA, Support 24/7)
-    BUSINESS_PREMIUM_PERCENT = 0.0  # เพิ่ม 10% สำหรับ business support
+    BUSINESS_PREMIUM_PERCENT = 0.0
     
     # Installation Fee - ค่าติดตั้งครั้งแรก (ไม่นับใน monthly floor price)
     INSTALLATION_FEE = {
-        'residential': 2777, # ระยะทางสาย 300 เมตร + 15 เมตร
-        'business': 3753     # ระยะทางสาย 500 เมตร + 20 เมตร
+        'residential': 2777,
+        'business': 3753
+    }
+
+    # Installation configuration (ใช้สำหรับ amortization และค่าระยะทางเพิ่ม)
+    INSTALLATION_CONFIG = {
+        'residential': {
+            'base_cost': 2777,
+            'base_length_m': 315
+        },
+        'business': {
+            'base_cost': 3753,
+            'base_length_m': 520
+        },
+        'extra_cost_per_meter': 10.0
     }
