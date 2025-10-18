@@ -26,7 +26,7 @@ except:
 def generate_qr_code(reference_id, size=100):
     """สร้าง QR Code สำหรับ reference ID"""
     qr = qrcode.QRCode(version=1, box_size=10, border=2)
-    verification_url = f"https://floorprice.example.com/verify/{reference_id}"
+    verification_url = f"https://floorprice.example.com/?reference_id={reference_id}"
     qr.add_data(verification_url)
     qr.make(fit=True)
     
@@ -227,7 +227,7 @@ def generate_verification_document_html(log):
             <div class="ref-label">รหัสอ้างอิง / Reference ID</div>
             <div class="ref-id">{log.reference_id}</div>
             <div style="margin-top: 10px; font-size: 9pt; color: #666;">
-                ตรวจสอบความถูกต้องได้ที่: https://floorprice.example.com/verify/{log.reference_id}
+                ตรวจสอบความถูกต้องได้ที่: https://floorprice.example.com/?reference_id={log.reference_id}
             </div>
         </div>
         
@@ -455,7 +455,7 @@ Reference ID: {log.reference_id}
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 ตรวจสอบได้ที่: 
-https://floorprice.example.com/verify/{log.reference_id}
+https://floorprice.example.com/?reference_id={log.reference_id}
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
     """
     
