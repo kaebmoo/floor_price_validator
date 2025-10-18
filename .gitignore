@@ -183,3 +183,4 @@ cython_debug/
 .cursorignore
 .cursorindexingignore
 floor_price_plan.md
+.streamlit/secrets.toml

@@ -1,5 +1,3 @@
-import os
-
 import streamlit as st
 import streamlit.components.v1 as components
 import database as db
@@ -8,7 +6,12 @@ import document_export as doc_export
 
 st.set_page_config(page_title="Floor Price Verification", page_icon="🔍", layout="wide")
 
-MAIN_APP_URL = os.environ.get("MAIN_APP_URL")
+try:
+    MAIN_APP_URL = st.secrets["MAIN_APP_URL"]
+except (KeyError, FileNotFoundError):
+    import os
+
+    MAIN_APP_URL = os.environ.get("MAIN_APP_URL")
 
 
 def _ensure_query_redirect():
@@ -146,7 +149,7 @@ def _render_verification_result(log):
     st.write("---")
     if st.button("🔄 ตรวจสอบ Reference ID อื่น", key="btn_check_another"):
         st.experimental_set_query_params()
-        st.experimental_rerun()
+        st.rerun()
 
 
 def main():
@@ -182,7 +185,7 @@ def main():
         result = _load_price_check(ref_to_check)
         if result:
             st.experimental_set_query_params(reference_id=result.reference_id)
-            st.experimental_rerun()
+            st.rerun()
         else:
             st.error("❌ ไม่พบข้อมูลสำหรับ Reference ID นี้")
 
