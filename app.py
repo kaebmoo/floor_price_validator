@@ -185,8 +185,8 @@ def price_check_interface_v2():
         proposed_price = st.number_input(
             "ราคาที่ต้องการเสนอขาย (บาท/เดือน)",
             min_value=0.0,
-            value=871.42,
-            step=1.0
+            value=500.00,
+            step=10.0
         )
 
         discount_percent = st.number_input(

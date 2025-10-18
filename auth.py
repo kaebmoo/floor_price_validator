@@ -1,6 +1,7 @@
 import smtplib
 from email.mime.text import MIMEText
 from email.mime.multipart import MIMEMultipart
+from email.utils import formataddr
 from datetime import datetime
 import streamlit as st
 from config import Config
@@ -22,7 +23,7 @@ def send_otp_email(email, otp_code):
     # Production Mode - ส่ง email จริง
     try:
         msg = MIMEMultipart()
-        msg['From'] = Config.SMTP_USERNAME
+        msg['From'] = formataddr((Config.SENDER_NAME, Config.FROM_EMAIL))
         msg['To'] = email
         msg['Subject'] = 'รหัส OTP สำหรับเข้าสู่ระบบ Floor Price Validator'
         
@@ -33,6 +34,9 @@ def send_otp_email(email, otp_code):
             <p>รหัส OTP สำหรับเข้าสู่ระบบ: <strong style="font-size: 24px; color: #0066cc;">{otp_code}</strong></p>
             <p>รหัสนี้จะหมดอายุใน {Config.OTP_EXPIRY_MINUTES} นาที</p>
             <p><em>หากคุณไม่ได้ร้องขอรหัสนี้ กรุณาเพิกเฉยต่ออีเมลนี้</em></p>
+            <br>
+            <p>ฝ่ายบัญชีบริหารและกรอบอัตราค่าบริการ</p>
+            <p>บริษัท โทรคมนาคมแห่งชาติ จำกัด (มหาชน)</p>
         </body>
         </html>
         """

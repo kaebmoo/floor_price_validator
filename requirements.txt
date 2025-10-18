@@ -5,3 +5,6 @@ sqlalchemy
 bcrypt
 email-validator
 pytz
+plotly
+qrcode
+reportlab

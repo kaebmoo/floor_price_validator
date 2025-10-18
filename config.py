@@ -4,12 +4,14 @@ from dotenv import load_dotenv
 load_dotenv()
 
 class Config:
-    DEV_MODE = False  # ตั้งค่าเป็น True เพื่อพัฒนาในเครื่อง (ไม่ส่ง email จริง)
+    DEV_MODE = True  # ตั้งค่าเป็น True เพื่อพัฒนาในเครื่อง (ไม่ส่ง email จริง)
     # Email
     SMTP_SERVER = os.getenv('SMTP_SERVER')
     SMTP_PORT = int(os.getenv('SMTP_PORT', 587))
     SMTP_USERNAME = os.getenv('SMTP_USERNAME')
     SMTP_PASSWORD = os.getenv('SMTP_PASSWORD')
+    FROM_EMAIL = os.getenv('FROM_EMAIL', 'noreply@ntplc.co.th')
+    SENDER_NAME = os.getenv('SENDER_NAME', 'Floor Price Validator')
     
     # Organization
     ALLOWED_EMAIL_DOMAIN = os.getenv('ALLOWED_EMAIL_DOMAIN')
